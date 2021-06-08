@@ -68,7 +68,25 @@ client.on('message', async (message) => {
     if(command == 'stats'){
         let userIdTarget = args.join('').slice(3, args.join('').length - 1)
         if(userIdTarget){
-            console.log('existe')
+            await User.find({userId: userIdTarget})
+            .then(rep => {
+                let tukiQtyInThisServer = []
+                rep[0].tukisPerServer.map(item => {
+                    if(item.serverId === message.guild.id) tukiQtyInThisServer.push(item.tukiCounter)
+                })
+                let embed = new MessageEmbed()
+                .setColor('ffa07a')
+                .setAuthor(rep[0].username, rep[0].avatar)
+                .setDescription(`Tiene \`${tukiQtyInThisServer[0]}\` tukis en el server`)
+                message.channel.send(embed)
+            })
+            .catch(error => {
+                console.log(error)
+                let embed = new MessageEmbed()
+                .setColor('ffa07a')
+                .setDescription('No encontré datos de ese usuario pa')
+                message.channel.send(embed)
+            })
         } else {
             let tukisInThisServer = await User.find({}).then(rep => {
                 let totalServerTuki = rep.reduce((acc,valor) => {
