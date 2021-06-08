@@ -2,11 +2,14 @@ require('dotenv').config();
 require('./connectiondb.js');
 const {Client, MessageEmbed} = require('discord.js');
     client = new Client();
-
-const User = require('./models/user')
+    prefix = '¡';
+const User = require('./models/user');
 
 client.on('message', async (message) => {
     if (message.author.bot) return;
+    const args = message.content.slice(prefix.length).trim().split(/ +/g);
+    const command = args.shift();
+
     if(message.content.toLowerCase().includes("tuki")){
         User.findOne({userId: message.author.id}, (error, user) => {
             if(error)console.log(error)
@@ -43,8 +46,8 @@ client.on('message', async (message) => {
                 newUser.save()
             }
         })
-        setTimeout(() => {
-            User.find({}).then(rep => {
+        setTimeout(async () => {
+            await User.find({}).then(rep => {
                 let totalServerTuki = rep.reduce((acc,valor) => {
                     let tukisArray = []
                     valor.tukisPerServer.map(item => {
@@ -61,6 +64,64 @@ client.on('message', async (message) => {
                 message.channel.send(embed)                
             })
         }, 500)
+    }
+    if(command == 'stats'){
+        let userIdTarget = args.join('').slice(3, args.join('').length - 1)
+        if(userIdTarget){
+            console.log('existe')
+        } else {
+            let tukisInThisServer = await User.find({}).then(rep => {
+                let totalServerTuki = rep.reduce((acc,valor) => {
+                    let tukisArray = []
+                    valor.tukisPerServer.map(item => {
+                        if(item.serverId === message.guild.id) {
+                            tukisArray.push(item.tukiCounter)
+                        }
+                    })
+                    let tukis = tukisArray.length !== 0 ? tukisArray.reduce((acc, valor) => {return acc + valor}) : 0
+                    return acc + tukis
+                }, 0)
+                return totalServerTuki
+            })
+            let top5TukisPerUser = await User.find({}).then(rep => {
+                let tukisPerUser = []
+                rep.map(item => {
+                    let userInfo = {
+                        userId: item.userId,
+                        username: item.username,
+                        discriminator: item.discriminator,
+                        avatar: item.avatar
+                    };
+                    item.tukisPerServer.map(tukis => {
+                        if(tukis.serverId === message.guild.id){
+                            tukisPerUser.push({
+                                ...userInfo,
+                                tukiCounter: tukis.tukiCounter
+                            })
+                        }
+                    })
+                })
+                let sortingArrayAscendent = tukisPerUser.sort((a,b) => {return b.tukiCounter - a.tukiCounter})
+                let top5 = []
+                sortingArrayAscendent.map((item, index) => {
+                    if(index >= 4)top5.push(item);
+                })
+                return tukisPerUser;
+            })
+            let top5 = [];
+            top5TukisPerUser.map(item => {
+                top5.push(`${item.username}: \`${item.tukiCounter}\`\n`)
+            })
+            let top5string = top5.join('')
+            let embed = new MessageEmbed()
+            .setColor('ffa07a')
+            .setThumbnail(top5TukisPerUser[0].avatar)
+            .setTitle(`Tenemos \`${tukisInThisServer}\` tukis en el server paaa`)
+            .setDescription(`Top 5:\n
+            ${top5string}
+            Si querés saber los tukis de alguien en particular usá \`${prefix}stats @usuario\``)
+            message.channel.send(embed)
+        }
     }
 })
 
