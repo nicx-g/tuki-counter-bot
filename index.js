@@ -2,11 +2,29 @@ require('dotenv').config();
 require('./connectiondb.js');
 const {Client, MessageEmbed} = require('discord.js');
     client = new Client();
-    prefix = "¡"
 const User = require('./models/user');
+const ServerConfig = require('./models/serverconfig');
+const getPrefix = async (serverId, serverName) => {
+    let prefix;
+    await ServerConfig.findOne({serverId: serverId})
+    .then(server => {
+        prefix = server.prefix
+    })
+    .catch(error => {
+        const newServerConfig = new ServerConfig({
+            serverName,
+            serverId,
+            prefix: '¡'
+        })
+        newServerConfig.save().catch(error => console.log(error))
+        prefix = newServerConfig.prefix
+    })
+    return prefix
+}
 
 client.on('message', async (message) => {
     if (message.author.bot) return;
+    const prefix = await getPrefix(message.guild.id, message.guild.name)
     const args = message.content.slice(prefix.length).trim().split(/ +/g);
     const command = args.shift();
 
@@ -158,6 +176,27 @@ client.on('message', async (message) => {
         .addFields(comandos)
         message.channel.send(embed)
     }
+    if(command == 'prefix' && message.content.startsWith(prefix)){
+        ServerConfig.updateOne({serverId: message.guild.id}, {prefix: args[0]}, (error, then) => {
+            if(error){
+                console.log(error)
+                let embed = new MessageEmbed()
+                .setColor('ffa07a')
+                .setDescription('Ocurrió un error, intentá de nuevo')
+                message.channel.send(embed)
+            }
+            if(then){
+                let embed = new MessageEmbed()
+                .setColor('ffa07a')
+                .setDescription(`perfect, mi nuevo prefix es \`${args[0]}\``)
+                message.channel.send(embed)
+            }
+        })
+    }
+})
+client.on('guildCreate', async(guild) => {
+    let prefix = await getPrefix(guild.id, guild.name)
+    client.user.setActivity(`default prefix: ¡`, {type: 'PLAYING'})
 })
 
 client.login(process.env.DISCORD_TOKEN);
