@@ -2,7 +2,7 @@ require('dotenv').config();
 require('./connectiondb.js');
 const {Client, MessageEmbed} = require('discord.js');
     client = new Client();
-    prefix = '¡';
+    prefix = "¡"
 const User = require('./models/user');
 
 client.on('message', async (message) => {
@@ -65,7 +65,7 @@ client.on('message', async (message) => {
             })
         }, 500)
     }
-    if(command == 'stats'){
+    if(command == 'stats' && message.content.startsWith(prefix)){
         let userIdTarget = args.join('').slice(3, args.join('').length - 1)
         if(userIdTarget){
             await User.find({userId: userIdTarget})
@@ -140,6 +140,23 @@ client.on('message', async (message) => {
             Si querés saber los tukis de alguien en particular usá \`${prefix}stats @usuario\``)
             message.channel.send(embed)
         }
+    }
+    if(command == 'help' && message.content.startsWith(prefix)){
+        let comandos = [
+            {
+                name: `${prefix}prefix`,
+                value: `Para cambiar el prefix predeterminado, el actual es \`${prefix}\``
+            },
+            {
+                name: `${prefix}stats`,
+                value: `Para saber las estadísticas del servidor, este te mostrará la cantidad de Tukis actuales y el top 5 de los vírgenes que más tukis pusieron, si querés saber cuántos tukis puso en específico, lo podés taggear. Ejemplo: \`${prefix}stats @usuario\``
+            }
+        ]
+        let embed = new MessageEmbed()
+        .setColor('ffa07a')
+        .setTitle('Estos son los comandos disponibles:')
+        .addFields(comandos)
+        message.channel.send(embed)
     }
 })
 
